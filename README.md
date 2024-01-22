@@ -85,10 +85,10 @@ Even so, I simply think this is the best form of distribution in this case.
 
 ## Why would I want this API instead of building my own?
 
-One of the reasons it took Rubat 10 years to release the GM:OnLuaError is because this hook can cause serious problems in the game if we don't know how to deal with it.
+The biggest problem with using this hook is that it can be called multiple times per frame, so we can't write slow code inside it...
 
-For example, we cannot generate errors within GM:OnLuaError, otherwise we will create a loop (for obvious reasons). We also cannot have slow code in this location, because sometimes it can be called multiple times per frame.
+Given this, I carefully wrote my API not only to be reloadable, accessible and error-proofed, but to run as fast as I can make it!
 
-So, I wrote my API very carefully to make it reloadable, accessible, error-proofed and as fast as I can make it! And what guarantees the quality is that I already use this code with hundreds of thousands of players. It works.
+And what guarantees the quality is that I already use this code with hundreds of thousands of players. It works.
 
 Enjoy!
