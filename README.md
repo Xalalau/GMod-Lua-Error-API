@@ -85,10 +85,6 @@ Even so, I simply think this is the best form of distribution in this case.
 
 ## Why would I want this API instead of building my own?
 
-The biggest problem with using this hook is that it can be called multiple times per frame, so we can't write slow code inside it...
-
-Given this, I carefully wrote my API not only to be reloadable, accessible and error-proofed, but to run as fast as I can make it!
-
-And what guarantees the quality is that I already use this code with hundreds of thousands of players. It works.
+The biggest problem with using this hook is that it can be called multiple times per frame, so we can't write slow code inside it... Given this, I carefully wrote my API not only to be reloadable, accessible and error-proofed, but to run as fast as I can make it! And what guarantees the quality is that I already use this code with hundreds of thousands of players. It works.
 
 Enjoy!
