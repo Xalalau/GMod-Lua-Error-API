@@ -65,7 +65,7 @@ The code for gerror is VERY simple and open-source: https://github.com/Xalalau/g
 
 I'm avoiding to build a complex solution because I like my free time, but the possibilities are endless here.
 
-Maybe the best way to deal with this date is using a service like Sentry (https://sentry.io/), but I'm not sure as I've never used it before.
+Maybe the best way to deal with this data is setting up a service like Sentry (https://sentry.io/), but I'm not sure as I've never used it before.
 
 ## Why is this API being hotloaded instead of using the Steam Workshop?
 
