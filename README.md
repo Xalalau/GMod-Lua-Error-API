@@ -27,13 +27,18 @@ Add the following lines to your project changing the API version if needed and i
 
 ```Lua
 timer.Simple(0, function()
-    http.Fetch("https://raw.githubusercontent.com/Xalalau/GMod-Lua-Error-API/main/sh_error_api_v2.lua", function(APICode)
-        RunString(APICode)
-        ErrorAPIV2:RegisterAddon(
-            'server url',
-            'database name',
-            'addon wsid'
-        )
+    http.Fetch("https://raw.githubusercontent.com/Xalalau/GMod-Lua-Error-API/main/sh_error_api_v2.lua", function(APICode, len, headers, code)
+        if code == 200
+            RunString(APICode)
+            ErrorAPIV2:RegisterAddon(
+                "https://mywebsite.com",
+                "database_name",
+                "0123456789"
+            )
+        end
+        InitMyAddon()
+    end, function()
+        InitMyAddon()
     end)
 end)
 ```
