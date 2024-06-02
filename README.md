@@ -28,7 +28,7 @@ Add the following lines to your project changing the API version if needed and i
 ```Lua
 timer.Simple(0, function()
     http.Fetch("https://raw.githubusercontent.com/Xalalau/GMod-Lua-Error-API/main/sh_error_api_v2.lua", function(APICode, len, headers, code)
-        if code == 200
+        if code == 200 then
             RunString(APICode)
             ErrorAPIV2:RegisterAddon(
                 "https://mywebsite.com",
