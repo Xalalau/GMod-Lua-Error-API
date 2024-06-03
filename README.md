@@ -4,7 +4,7 @@ Don't wait for players to report, get the errors automatically!
 
 ## Why would I want this API instead of building my own?
 
-Because I carefully wrote my API not only to be reloadable, accessible and error-proofed, but to run as fast as I can make it! It was battle-tested by hundreds of thousands of players on my addons, it **works**. Besides that, the GMod hook that delivers errors (OnLuaError) is called multiple times per frame, so if you are going to build your own solution be very careful with this!
+Because I carefully wrote my API not only to be reloadable, accessible and error-proofed, but to run as fast as I can make it! It was battle-tested by hundreds of thousands of players on my addons, it **works**.
 
 ## Shared data
 
