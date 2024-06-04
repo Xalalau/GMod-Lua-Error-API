@@ -35,9 +35,9 @@ timer.Simple(0, function()
         if code == 200 then
             RunString(APICode)
             ErrorAPIV2:RegisterAddon(
-                "https://mywebsite.com",
-                "database_name",
-                "0123456789"
+                "https://mywebsite.com", -- database url
+                "database_name", -- database name
+                "0123456789" -- worshop addon wsid
             )
         end
         InitMyAddon()
