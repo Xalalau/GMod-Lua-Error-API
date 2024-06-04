@@ -49,11 +49,15 @@ end)
 
 I'd put it in ``/lua/autorun/somefile.lua``, so both server and client errors will be processed.
 
-These are the current configurations for version 2:
+ErrorAPIV2() call returns the object responsible for controlling how the API works. These are its current properties (for version 2):
 ```
+    -- Configurable, base:
+
     boolean enabled      = true to send errors,
     string  url          = server url,
     string  databaseName = SQL table name,
+
+    -- Configurable, identify the addon. Requires at least 1 field to work:
 
     string  wsid             = OPTIONAL workshop addon wsid,
     string  legacyFolderName = OPTIONAL addon folder name inside the addons directory (will be disabled if the folder doesn't exist)
@@ -62,7 +66,7 @@ These are the current configurations for version 2:
 
 Note1: Check sh_error_api_v2.lua for extra internal settings.
 
-Note2: There's no problem with the API being reloaded by multiple addons, it was designed to work like that. No information will be lost.
+Note2: There's no problem with the API being loaded by multiple addons, it was designed to work like that. No information will be lost.
 
 ## Data usage example
 
