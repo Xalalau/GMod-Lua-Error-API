@@ -37,7 +37,7 @@ timer.Simple(0, function()
             ErrorAPIV2:RegisterAddon(
                 "https://mywebsite.com", -- database url
                 "database_name", -- database name
-                "0123456789" -- worshop addon wsid
+                "0123456789" -- workshop addon wsid
             )
         end
         InitMyAddon()
