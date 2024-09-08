@@ -1,6 +1,6 @@
 # GMod Lua Error API
 
-Don't wait for players to report, get the errors automatically!
+Don't wait for players to report issues, get the errors automatically!
 
 ## Why would I want this API instead of building my own?
 
