@@ -83,7 +83,7 @@ local function PrintInternalError(err)
 end
 
 -- Check if a registered URL is online
-local function CheckURL()
+local function CheckURL(addonData)
     http.Post(
         addonData.url .. "/ping.php",
         {},
@@ -105,13 +105,13 @@ end
 local function AutoCheckURL(addonData)
     if not timer.Exists(addonData.url) then
         timer.Simple(0, function() -- Trick to avoid calling http too early
-            CheckURL()
+            CheckURL(addonData)
         end)
     end
 
     timer.Create(addonData.url, 600, 0, function()
         if not addonData.isUrlOnline then
-            CheckURL()
+            CheckURL(addonData)
         else
             timer.Remove(addonData.url)
         end
