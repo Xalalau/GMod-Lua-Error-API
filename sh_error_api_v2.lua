@@ -82,33 +82,39 @@ local function PrintInternalError(err)
     print("ErrorAPI: Internal error: " .. err)
 end
 
+-- Check if a registered URL is online
+local function CheckURL()
+    http.Post(
+        addonData.url .. "/ping.php",
+        {},
+        function(response)
+            if printResponses then
+                print(response)
+            end
+
+            addonData.isUrlOnline = true
+        end,
+        function()
+            addonData.isUrlOnline = false
+            print("ErrorAPI: WARNING!!! Offline url: " .. addonData.url)
+        end
+    )
+end
+
 -- Check if the registered URLs are online
 local function AutoCheckURL(addonData)
-    local function CheckURL()
-        http.Post(
-            addonData.url .. "/ping.php",
-            {},
-            function(response)
-                if printResponses then
-                    print(response)
-                end
-
-                addonData.isUrlOnline = true
-            end,
-            function()
-                addonData.isUrlOnline = false
-                print("ErrorAPI: WARNING!!! Offline url: " .. addonData.url)
-            end
-        )
-    end
-
     if not timer.Exists(addonData.url) then
         timer.Simple(0, function() -- Trick to avoid calling http too early
             CheckURL()
         end)
     end
+
     timer.Create(addonData.url, 600, 0, function()
-        CheckURL()
+        if not addonData.isUrlOnline then
+            CheckURL()
+        else
+            timer.Remove(addonData.url)
+        end
     end)
 end
 
@@ -331,6 +337,9 @@ local function Report(addonData, msg)
             if reportDelay == 0 then
                 addonData.errors[msg].queuing = false
             end
+
+            -- Check if the database is online
+            AutoCheckURL(addonData)
         end
     )
 
