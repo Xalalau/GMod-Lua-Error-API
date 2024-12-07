@@ -1,10 +1,9 @@
-
 --[[
     Automatic error reporting
 
-    An better way to handle errors: send them to a server instead of waiting for players to report
+    A better way to handle errors: send them to a server instead of waiting for players to report them.
 
-    This library was initially created to address gm_construct_13_beta issues but evolved to a small
+    This library was initially created to address gm_construct_13_beta issues but evolved into a small
     standalone solution.
 
     ---------------------------
@@ -12,26 +11,26 @@
     Data to be sent:
         realm         SERVER or CLIENT
         databaseName  An arbitrary name given to identify the buggy addon
-        msg           A brief 1 line message containing a hint as to why the error occurred
-        map           Map name. Knowing the map can help if it has scripts of if it's important to scripts
-        gamemode      Game mode name. Addons target certain game modes and disrespecting this can generate errors
+        msg           A brief one-line message containing a hint as to why the error occurred
+        map           Map name. Knowing the map can help if it has scripts or if it's important to scripts
+        gamemode      Game mode name. Addons target certain game modes and ignoring this can generate errors
         stack         The text that appears in the console showing the function calls that created the bug
         quantity      How many times an error occurred since the last time it was reported
-        versionDate   The addon gma timestamp, used to ignore reports from older addon releases. Legacy addons are set to 0
+        versionDate   The addon GMA timestamp, used to ignore reports from older addon releases. Legacy addons are set to 0
 
     This information is extremely basic and does not identify users in any way, therefore
     it's collected under the General Data Protection Regulation (GDPR) Legitimate Interest
     legal basis.
 
-    By the way, a system to receive the reports is needed, so I created an small website people can use
-    as a start point: https://github.com/Xalalau/gerror
+    By the way, a system to receive the reports is needed, so I created a small website people can use
+    as a starting point: https://github.com/Xalalau/gerror
 
     You can currently see it running here: https://gerror.xalalau.com/
 
     - Xalalau Xubilozo
 ]]
 
--- Vars
+-- Variables
 
 local version = 2
 
@@ -45,40 +44,40 @@ _G["ErrorAPIV" .. version] = _G["ErrorAPIV" .. version] or {
             -- Configurable, base:
 
             boolean enabled      = true to send errors,
-            string  url          = server url,
+            string  url          = server URL,
             string  databaseName = SQL table name,
 
             -- Configurable, identify the addon. Requires at least 1 field to work:
 
-            string  wsid             = OPTIONAL workshop addon wsid,
+            string  wsid             = OPTIONAL workshop addon WSID,
             string  legacyFolderName = OPTIONAL addon folder name inside the addons directory (will be disabled if the folder doesn't exist)
-            table   searchSubstrings = OPTIONAL { string error msg substring (at least 3 letters), ... }
+            table   searchSubstrings = OPTIONAL { string error message substring (at least 3 letters), ... }
 
             -- Internal:
 
             string  versionDate = the time when the workshop addon was last updated or 0 for legacy/scanned addons
-            boolean isUrlOnline = if the url is online,
+            boolean isUrlOnline = if the URL is online,
             table   errors = {
                 [string error ID] = {
-                    string error,    -- The main error message, 1 line
+                    string error,    -- The main error message, one line
                     string stack,    -- Full error stack, multiple lines
                     int    quantity, -- Error count
-                    bool   queuing   -- If the error is waiting to be sent again it queues new occurences
+                    bool   queuing   -- If the error is waiting to be sent again it queues new occurrences
                 }, ...
             }
         }, ...       ]]
     },
     fastFind = {
-        wsid = {}, -- All tables here store { [string some key] = { table addonDAta, ... }, ... } 
+        wsid = {}, -- All tables here store { [string some key] = { table addonData, ... }, ... } 
         folderName = {},
         substring = {}
     },
-    fastCheckErrors = {} -- { [string error msg] = boolean found or not by the API } -- Used to prevent processing of recurring errors that don't concern the API
+    fastCheckErrors = {} -- { [string error message] = boolean found or not by the API } -- Used to prevent processing of recurring errors that don't concern the API
 }
 
 local ErrorAPI = _G["ErrorAPIV" .. version]
 
--- Error API internal issues got by xpcall
+-- Error API internal issues caught by xpcall
 local function PrintInternalError(err)
     print("ErrorAPI: Internal error: " .. err)
 end
@@ -97,7 +96,7 @@ local function CheckURL(addonData)
         end,
         function()
             addonData.isUrlOnline = false
-            print("ErrorAPI: WARNING!!! Offline url: " .. addonData.url)
+            print("ErrorAPI: WARNING!!! Offline URL: " .. addonData.url)
         end
     )
 end
@@ -149,13 +148,13 @@ end
         -- Required:
 
         string databaseName = database name,
-        string url = server url,
+        string url = server URL,
 
         -- Define at least one addon identifier:
 
-        string  wsid             = OPTIONAL workshop addon wsid,
+        string  wsid             = OPTIONAL workshop addon WSID,
         string  legacyFolderName = OPTIONAL addon folder name inside the addons directory (will be disabled if the folder doesn't exist)
-        table   searchSubstrings = OPTIONAL { string error msg substring (at least 3 letters), ... }
+        table   searchSubstrings = OPTIONAL { string error message substring (at least 3 letters), ... }
 
     return:
         success = table addonData -- Explained above
@@ -170,17 +169,17 @@ function ErrorAPI:RegisterAddon(url, databaseName, wsid, legacyFolderName, searc
         return
     end
 
-    if not url then print("ErrorAPI: " .. errorMsgStart .. " Missing url.") return end
+    if not url then print("ErrorAPI: " .. errorMsgStart .. " Missing URL.") return end
     if not databaseName then print("ErrorAPI: " .. errorMsgStart .. " Missing databaseName.") return end
     if databaseName == "" then print("ErrorAPI: " .. errorMsgStart .. " databaseName can't be an empty string.") return end
-    if wsid == "" then print("ErrorAPI: " .. errorMsgStart .. " wsid can't be an empty string.") return end
+    if wsid == "" then print("ErrorAPI: " .. errorMsgStart .. " WSID can't be an empty string.") return end
     if legacyFolderName == "" then print("ErrorAPI: " .. errorMsgStart .. " legacyFolderName can't be an empty string.") return end
-    if not isstring(url) then print("ErrorAPI: " .. errorMsgStart .. " url must be a string.") return end
+    if not isstring(url) then print("ErrorAPI: " .. errorMsgStart .. " URL must be a string.") return end
     if not isstring(databaseName) then print("ErrorAPI: " .. errorMsgStart .. " databaseName must be a string.") return end
     if searchSubstrings and not istable(searchSubstrings) then print("ErrorAPI: " .. errorMsgStart .. " searchSubstrings must be a table.") return end
-    if wsid and not isstring(wsid) then print("ErrorAPI: " .. errorMsgStart .. " wsid must be a string.") return end
+    if wsid and not isstring(wsid) then print("ErrorAPI: " .. errorMsgStart .. " WSID must be a string.") return end
     if legacyFolderName and not isstring(legacyFolderName) then print("ErrorAPI: " .. errorMsgStart .. " legacyFolderName must be a string.") return end
-    if not string.find(url, "http", 1, true) then print("ErrorAPI: " .. errorMsgStart .. " Please write the url in full") return end
+    if not string.find(url, "http", 1, true) then print("ErrorAPI: " .. errorMsgStart .. " Please write the URL in full") return end
 
     if searchSubstrings then
         local count = 1
@@ -201,7 +200,7 @@ function ErrorAPI:RegisterAddon(url, databaseName, wsid, legacyFolderName, searc
         end
     end
     if versionDate == 0 then
-        print("ErrorAPI: Addon gma not found or wsid not provided for database " .. databaseName .. ". addonData.versionDate will be set as 0.")
+        print("ErrorAPI: Addon GMA not found or WSID not provided for database " .. databaseName .. ". addonData.versionDate will be set as 0.")
     end
 
     -- Unregister older instances of this entry
@@ -244,19 +243,19 @@ function ErrorAPI:RegisterAddon(url, databaseName, wsid, legacyFolderName, searc
 
     AddToFastFind(addonData)
 
-    print("ErrorAPI: database " .. databaseName .. " registered (wsid " .. (wsid or "None") .. ")")
+    print("ErrorAPI: database " .. databaseName .. " registered (WSID " .. (wsid or "None") .. ")")
 
-    -- Ping the database url
+    -- Ping the database URL
     AutoCheckURL(addonData)
 
-    timer.Simple(0, function() -- Trick to avoid calling http too early
+    timer.Simple(0, function() -- Trick to avoid calling HTTP too early
         CheckURL(addonData)
     end)
 
     return addonData
 end
 
--- Succeded to send an error to the server
+-- Succeeded to send an error to the server
 local function OnReportSuccess(addonData, msg, resp, reportedQuantity)
     if printResponses then
         print(resp)
@@ -322,12 +321,12 @@ local function Report(addonData, msg)
     end)
 end
 
--- Register a new found error
+-- Register a newly found error
 local function Create(addonData, msg, stack)
     addonData.errors[msg] = {
         totalQuantity = 1,
         quantity = 1,
-        queuing = true -- Initialize the error status as "queuing" to avoid conflicts with concurrent occurences
+        queuing = true -- Initialize the error status as "queuing" to avoid conflicts with concurrent occurrences
     }
 
     -- Format the stack
@@ -348,12 +347,12 @@ end
 
 -- Deal with recurring errors
 local function Update(addonData, msg)
-    -- Increase the error counting
+    -- Increase the error count
     addonData.errors[msg].quantity = addonData.errors[msg].quantity + 1
     addonData.errors[msg].totalQuantity = addonData.errors[msg].totalQuantity + 1
 end
 
--- Search for substrings in the script error main msg
+-- Search for substrings in the script error main message
 local function Scan(msg)
     local addonDataList = {}
     local selected = {}
@@ -375,12 +374,12 @@ end
 -- Decide whether an error should be reported or not
 local function ProcessError(msg, stack, addonTitle, addonId)
     if not next(ErrorAPI.registered) then return {} end
-    if ErrorAPI.fastCheckErrors[msg] == false then return {} end -- false means we've already checked the error and it's not usefull for the API
+    if ErrorAPI.fastCheckErrors[msg] == false then return {} end -- false means we've already checked the error and it's not useful for the API
 
     local addonDataList = {}
 
     if ErrorAPI.fastCheckErrors[msg] == nil then
-        -- Search for wsid
+        -- Search for WSID
         if addonId and ErrorAPI.fastFind.wsid[addonId] then
             for k, addonData in ipairs(ErrorAPI.fastFind.wsid[addonId]) do
                 addonDataList[addonData] = true
@@ -430,7 +429,7 @@ local function Main(msg, realm, stack, addonTitle, addonId)
     if next(addonDataList) then
         local gotReport, ret = nil
 
-        -- addonData will be changed in Create or Update funcs
+        -- addonData will be changed in Create or Update functions
         for addonData, _ in pairs(addonDataList) do
             if addonData.errors[msg] == nil then
                 Create(addonData, msg, stack)
