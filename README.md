@@ -23,6 +23,10 @@ Here it is (http.Post):
 
 The sent information is extremely basic and does not identify users in any way. Therefore, it's collected under the General Data Protection Regulation (GDPR) Legitimate Interest legal basis and requires no authorization from players.
 
+## Opt-Out
+
+Just type ``error_api 0`` in the console.
+
 ## How to use
 
 Add the following lines to your project, changing the API version if needed and inputting your own settings:

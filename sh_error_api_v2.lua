@@ -30,6 +30,12 @@
     - Xalalau Xubilozo
 ]]
 
+-- Netwrorking
+
+if SERVER then
+    util.AddNetworkString("OnErrorAPICvarChange")
+end
+
 -- Variables
 
 local version = 2
@@ -76,6 +82,8 @@ _G["ErrorAPIV" .. version] = _G["ErrorAPIV" .. version] or {
 }
 
 local ErrorAPI = _G["ErrorAPIV" .. version]
+
+local errorAPICvar = CreateConVar("error_api", "1", { FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED }, "Allow the server to easily enable or disable the API.")
 
 -- Error API internal issues caught by xpcall
 local function PrintInternalError(err)
@@ -445,8 +453,49 @@ local function Main(msg, realm, stack, addonTitle, addonId)
     end
 end
 
--- The holy OnLuaError hook, that we almost had to kill Rubat to be released
---      https://github.com/Facepunch/garrysmod-requests/issues/149
-hook.Add("OnLuaError", "sev_errors_handler_v" .. version, function(msg, realm, stack, addonTitle, addonId)
-    xpcall(Main, PrintInternalError, msg, realm, stack, addonTitle, addonId)
-end)
+-- Manage the API initialization
+
+local function EnableErrorAPI()
+    -- The holy OnLuaError hook, that we almost had to kill Rubat to be released
+    --      https://github.com/Facepunch/garrysmod-requests/issues/149
+    hook.Add("OnLuaError", "sev_errors_handler_v" .. version, function(msg, realm, stack, addonTitle, addonId)
+        xpcall(Main, PrintInternalError, msg, realm, stack, addonTitle, addonId)
+    end)
+
+    print("ErrorAPI: API enabled")
+end
+
+local function DisableErrorAPI()
+    hook.Remove("OnLuaError", "sev_errors_handler_v" .. version)
+
+    print("ErrorAPI: API disabled")
+end
+
+local function OnErrorAPICvarChange(newValue)
+    if newValue == "1" then
+        EnableErrorAPI()
+    else
+        DisableErrorAPI()
+    end
+end
+
+if SERVER then
+    cvars.AddChangeCallback("error_api", function(convarName, oldValue, newValue)
+        OnErrorAPICvarChange(newValue)
+
+        net.Start("OnErrorAPICvarChange")
+            net.WriteString(newValue)
+        net.Broadcast()
+    end, "control_error_api")
+else
+    net.Receive("OnErrorAPICvarChange", function()
+        local newValue = net.ReadString()
+        OnErrorAPICvarChange(newValue)
+    end)
+end
+
+if errorAPICvar:GetBool() then
+    EnableErrorAPI()
+else
+    print("ErrorAPI: API is disabled")
+end
