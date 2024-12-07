@@ -1,4 +1,3 @@
-do return end -- temporarily disabled, I need to review the code to decrease the number of server requests
 
 --[[
     Automatic error reporting
@@ -38,7 +37,7 @@ local version = 2
 
 local printResponses = false
 
-local reportDelay = 10 -- Delay between reports of the same error. Set to 0 to disable
+local baseReportDelay = 1 -- Base delay between reports of the same error. The final delay will always be incremented by the API to protect the server from looping errors
 
 _G["ErrorAPIV" .. version] = _G["ErrorAPIV" .. version] or {
     registered = { --[[
@@ -257,43 +256,30 @@ function ErrorAPI:RegisterAddon(url, databaseName, wsid, legacyFolderName, searc
     return addonData
 end
 
--- Process delayed reports. This mode is supposed to protect the webserver from overloading
-    -- After we stop queuing an error we should send what's stored.
-    -- To do so, first we wait 0.1s to cover looping errors, as they will call Report() anyway.
-    -- Then if it's not the case, we'll check the error quantity. 0 means nothing new happened,
-    -- so we can go away from these timers. But if we got new error registered, we need to send
-    -- them and repeat the whole cycle using the same delay.
+-- Succeded to send an error to the server
+local function OnReportSuccess(addonData, msg, resp, reportedQuantity)
+    if printResponses then
+        print(resp)
+    end
 
-    -- Note1: I like to create recursive functions with timers because they create tail calls and save memory
-    -- Note2: incrementalDelay is exponencial. It's meant to protect the server against looping errors
-local function HandleDelayedReports(msg, parameters, addonData, reportedQuantity, incrementalDelay)
-    incrementalDelay = incrementalDelay or 0
+    -- Reset the counting
+    addonData.errors[msg].quantity = addonData.errors[msg].quantity - reportedQuantity
 
-    timer.Simple(reportDelay + incrementalDelay, function()
-        addonData.errors[msg].queuing = false
+    -- Finish the steps
+    addonData.errors[msg].queuing = false
+end
 
-        timer.Simple(0.1, function()
-            if addonData.errors[msg].queuing == false and addonData.isUrlOnline then
-                if addonData.errors[msg].quantity > 0 then
-                    parameters.quantity = tostring(addonData.errors[msg].quantity)
+-- Failed to send an error to the server
+local function OnReportFail(addonData, msg, resp)
+    if printResponses then
+        print(resp)
+    end
 
-                    http.Post(addonData.url .. "/add.php", parameters,
-                        function(resp)
-                            if printResponses then
-                                print(resp)
-                            end
+    -- Finish the steps
+    addonData.errors[msg].queuing = false
 
-                            addonData.errors[msg].quantity = addonData.errors[msg].quantity - reportedQuantity
-                        end
-                    )
-
-                    addonData.errors[msg].queuing = true
-
-                    HandleDelayedReports(msg, parameters, addonData, reportedQuantity, (incrementalDelay or 1) * 2)
-                end
-            end
-        end)
-    end)
+    -- Check if the database is online
+    AutoCheckURL(addonData)
 end
 
 -- Send script error to server
@@ -315,40 +301,56 @@ local function Report(addonData, msg)
     -- Set "queuing" to true
     addonData.errors[msg].queuing = true
 
-    -- Send the error as it is, so we always register it
-    http.Post(addonData.url .. "/add.php", parameters,
-        function(resp)
-            if printResponses then
-                print(resp)
-            end
+    -- Send error report to the server
+    local incrementalDelay = addonData.errors[msg].totalQuantity / 100000 -- Protect the server from looping errors
 
-            -- Reset the counting
-            addonData.errors[msg].quantity = addonData.errors[msg].quantity - reportedQuantity
+    timer.Simple(baseReportDelay + incrementalDelay, function()
+        if addonData.isUrlOnline then
+            parameters.quantity = tostring(reportedQuantity)
 
-            -- Finish the steps if no delay is provided
-            if reportDelay == 0 then
-                addonData.errors[msg].queuing = false
-            end
-        end,
-        function(resp)
-            if printResponses then
-                print(resp)
-            end
-
-            -- Finish the steps if no delay is provided
-            if reportDelay == 0 then
-                addonData.errors[msg].queuing = false
-            end
-
-            -- Check if the database is online
-            AutoCheckURL(addonData)
+            http.Post(addonData.url .. "/add.php", parameters,
+                function(resp)
+                    OnReportSuccess(addonData, msg, resp, reportedQuantity)
+                end,
+                function(resp)
+                    OnReportFail(addonData, msg, resp)
+                end
+            )
+        else
+            addonData.errors[msg].queuing = false
         end
-    )
+    end)
+end
 
-    -- Process delayed reports. This mode is supposed to protect the webserver from overloading
-    if reportDelay > 0 then
-        HandleDelayedReports(msg, parameters, addonData, reportedQuantity)
+-- Register a new found error
+local function Create(addonData, msg, stack)
+    addonData.errors[msg] = {
+        totalQuantity = 1,
+        quantity = 1,
+        queuing = true -- Initialize the error status as "queuing" to avoid conflicts with concurrent occurences
+    }
+
+    -- Format the stack
+    local stackFormatted = "stack traceback:\n"
+
+    for k, line in ipairs(stack) do
+        stackFormatted = stackFormatted .. "    " .. line.File .. ":" .. line.Line
+
+        if line.Function and line.Function ~= "" then
+            stackFormatted = stackFormatted .. ": in function " .. line.Function
+        end
+
+        stackFormatted = stackFormatted .. "\n"
     end
+
+    addonData.errors[msg].stack = stackFormatted
+end
+
+-- Deal with recurring errors
+local function Update(addonData, msg)
+    -- Increase the error counting
+    addonData.errors[msg].quantity = addonData.errors[msg].quantity + 1
+    addonData.errors[msg].totalQuantity = addonData.errors[msg].totalQuantity + 1
 end
 
 -- Search for substrings in the script error main msg
@@ -370,47 +372,10 @@ local function Scan(msg)
     return selected
 end
 
--- Register a new found error
-local function Create(addonData, msg, stack)
-    addonData.errors[msg] = {
-        quantity = 1,
-        queuing = true -- Initialize the error status as "queuing" to avoid conflicts with concurrent occurences
-    }
-
-    -- Format the stack
-    local stackFormatted = "stack traceback:\n"
-
-    for k, line in ipairs(stack) do
-        stackFormatted = stackFormatted .. "    " .. line.File .. ":" .. line.Line
-
-        if line.Function and line.Function ~= "" then
-            stackFormatted = stackFormatted .. ": in function " .. line.Function
-        end
-
-        stackFormatted = stackFormatted .. "\n"
-    end
-
-    addonData.errors[msg].stack = stackFormatted
-
-    -- Report the new error
-    Report(addonData, msg)
-end
-
--- Deal with recurring errors
-local function Update(addonData, msg)
-    -- Increase the error counting
-    addonData.errors[msg].quantity = addonData.errors[msg].quantity + 1
-
-    -- Report the current error count if it's not already waiting to be sent
-    if not addonData.errors[msg].queuing then
-        Report(addonData, msg)
-    end
-end
-
 -- Decide whether an error should be reported or not
 local function ProcessError(msg, stack, addonTitle, addonId)
-    if not next(ErrorAPI.registered) then return end
-    if ErrorAPI.fastCheckErrors[msg] == false then return end -- false means we've already checked the error and it's not usefull for the API
+    if not next(ErrorAPI.registered) then return {} end
+    if ErrorAPI.fastCheckErrors[msg] == false then return {} end -- false means we've already checked the error and it's not usefull for the API
 
     local addonDataList = {}
 
@@ -453,13 +418,29 @@ local function ProcessError(msg, stack, addonTitle, addonId)
         addonDataList = ErrorAPI.fastCheckErrors[msg]
     end
 
-    -- Process results
+    return addonDataList
+end
+
+-- The main function
+local function Main(msg, realm, stack, addonTitle, addonId)
+    -- Process error
+    local addonDataList = ProcessError(msg, stack, addonTitle, addonId)
+
+    -- Report wanted results
     if next(addonDataList) then
+        local gotReport, ret = nil
+
+        -- addonData will be changed in Create or Update funcs
         for addonData, _ in pairs(addonDataList) do
             if addonData.errors[msg] == nil then
-                xpcall(Create, PrintInternalError, addonData, msg, stack)
+                Create(addonData, msg, stack)
+                Report(addonData, msg)
             else
-                xpcall(Update, PrintInternalError, addonData, msg)
+                Update(addonData, msg)
+
+                if not addonData.errors[msg].queuing then
+                    Report(addonData, msg)
+                end
             end
         end
     end
@@ -467,6 +448,6 @@ end
 
 -- The holy OnLuaError hook, that we almost had to kill Rubat to be released
 --      https://github.com/Facepunch/garrysmod-requests/issues/149
-hook.Add("OnLuaError", "sev_errors_handler_v" .. version, function(str, realm, stack, addonTitle, addonId)
-    ProcessError(str, stack, addonTitle, addonId)
+hook.Add("OnLuaError", "sev_errors_handler_v" .. version, function(msg, realm, stack, addonTitle, addonId)
+    xpcall(Main, PrintInternalError, msg, realm, stack, addonTitle, addonId)
 end)
