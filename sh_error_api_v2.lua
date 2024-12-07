@@ -266,7 +266,7 @@ end
 
     -- Note1: I like to create recursive functions with timers because they create tail calls and save memory
     -- Note2: incrementalDelay is exponencial. It's meant to protect the server against looping errors
-local function HandleDelayedReports(msg, parameters, addonData, incrementalDelay)
+local function HandleDelayedReports(msg, parameters, addonData, reportedQuantity, incrementalDelay)
     incrementalDelay = incrementalDelay or 0
 
     timer.Simple(reportDelay + incrementalDelay, function()
@@ -283,13 +283,13 @@ local function HandleDelayedReports(msg, parameters, addonData, incrementalDelay
                                 print(resp)
                             end
 
-                            addonData.errors[msg].quantity = 0
+                            addonData.errors[msg].quantity = addonData.errors[msg].quantity - reportedQuantity
                         end
                     )
 
                     addonData.errors[msg].queuing = true
 
-                    HandleDelayedReports(msg, parameters, addonData, (incrementalDelay or 1) * 2)
+                    HandleDelayedReports(msg, parameters, addonData, reportedQuantity, (incrementalDelay or 1) * 2)
                 end
             end
         end)
@@ -300,6 +300,7 @@ end
 local function Report(addonData, msg)
     if not addonData.isUrlOnline then return end
 
+    local reportedQuantity = addonData.errors[msg].quantity
     local parameters = {
         realm = SERVER and "SERVER" or "CLIENT",
         databaseName = addonData.databaseName,
@@ -307,7 +308,7 @@ local function Report(addonData, msg)
         stack = addonData.errors[msg].stack,
         map = game.GetMap(),
         gamemode = engine.ActiveGamemode(),
-        quantity = tostring(addonData.errors[msg].quantity),
+        quantity = tostring(reportedQuantity),
         versionDate = tostring(addonData.versionDate)
     }
 
@@ -322,7 +323,7 @@ local function Report(addonData, msg)
             end
 
             -- Reset the counting
-            addonData.errors[msg].quantity = 0
+            addonData.errors[msg].quantity = addonData.errors[msg].quantity - reportedQuantity
 
             -- Finish the steps if no delay is provided
             if reportDelay == 0 then
@@ -346,7 +347,7 @@ local function Report(addonData, msg)
 
     -- Process delayed reports. This mode is supposed to protect the webserver from overloading
     if reportDelay > 0 then
-        HandleDelayedReports(msg, parameters, addonData)
+        HandleDelayedReports(msg, parameters, addonData, reportedQuantity)
     end
 end
 
