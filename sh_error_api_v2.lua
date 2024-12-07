@@ -1,3 +1,5 @@
+do return end -- temporarily disabled, I need to review the code to decrease the number of server requests
+
 --[[
     Automatic error reporting
 
