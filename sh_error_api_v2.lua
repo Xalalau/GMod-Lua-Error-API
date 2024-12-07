@@ -203,7 +203,6 @@ function ErrorAPI:RegisterAddon(url, databaseName, wsid, legacyFolderName, searc
     end
     if versionDate == 0 then
         print("ErrorAPI: Addon gma not found or wsid not provided for database " .. databaseName .. ". addonData.versionDate will be set as 0.")
-        return
     end
 
     -- Unregister older instances of this entry
@@ -246,7 +245,7 @@ function ErrorAPI:RegisterAddon(url, databaseName, wsid, legacyFolderName, searc
 
     AddToFastFind(addonData)
 
-    print("ErrorAPI: database " .. databaseName .. " registered (wsid " .. wsid .. ")")
+    print("ErrorAPI: database " .. databaseName .. " registered (wsid " .. (wsid or "None") .. ")")
 
     -- Ping the database url
     AutoCheckURL(addonData)
