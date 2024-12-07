@@ -106,18 +106,14 @@ end
 -- Check if the registered URLs are online
 local function AutoCheckURL(addonData)
     if not timer.Exists(addonData.url) then
-        timer.Simple(0, function() -- Trick to avoid calling http too early
-            CheckURL(addonData)
+        timer.Create(addonData.url, math.random(500, 600), 0, function()
+            if not addonData.isUrlOnline then
+                CheckURL(addonData)
+            else
+                timer.Remove(addonData.url)
+            end
         end)
     end
-
-    timer.Create(addonData.url, 600, 0, function()
-        if not addonData.isUrlOnline then
-            CheckURL(addonData)
-        else
-            timer.Remove(addonData.url)
-        end
-    end)
 end
 
 -- Make it easier to find the addons as processing errors can be an intensive task
@@ -254,6 +250,10 @@ function ErrorAPI:RegisterAddon(url, databaseName, wsid, legacyFolderName, searc
 
     -- Ping the database url
     AutoCheckURL(addonData)
+
+    timer.Simple(0, function() -- Trick to avoid calling http too early
+        CheckURL(addonData)
+    end)
 
     return addonData
 end
